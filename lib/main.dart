@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:decorated_icon/decorated_icon.dart';
+import 'dart:io';
 
 void main() {
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -19,7 +20,7 @@ class MyApp extends StatelessWidget {
           primarySwatch: Colors.lightBlue,
           visualDensity: VisualDensity.adaptivePlatformDensity,
         ),
-        home: SpeechTranslator());
+        home: const SpeechTranslator());
   }
 }
 
@@ -54,6 +55,7 @@ class _SpeechTranslatorState extends State<SpeechTranslator> {
     'way',
     'ride'
   ];
+  var prevSnack = DateTime.now();
 
   @override
   void initState() {
@@ -66,7 +68,7 @@ class _SpeechTranslatorState extends State<SpeechTranslator> {
     return Scaffold(
         appBar: AppBar(
           title: RichText(
-              text: TextSpan(children: [
+              text: const TextSpan(children: [
             TextSpan(
               text: "English ",
               style: TextStyle(fontSize: 20),
@@ -94,7 +96,7 @@ class _SpeechTranslatorState extends State<SpeechTranslator> {
                 child: FloatingActionButton(
               onPressed: _listen,
               child: _isListening
-                  ? DecoratedIcon(
+                  ? const DecoratedIcon(
                       Icons.mic,
                       shadows: [
                         BoxShadow(
@@ -103,18 +105,19 @@ class _SpeechTranslatorState extends State<SpeechTranslator> {
                         ),
                       ],
                     )
-                  : Icon(
+                  : const Icon(
                       Icons.mic_none,
                     ),
             ))),
-        body: Column(
+        body: SingleChildScrollView(
+            child: Column(
           children: <Widget>[
             Align(
               alignment: Alignment.centerLeft,
               child: Row(children: <Widget>[
                 Container(
-                  padding: EdgeInsets.fromLTRB(30, 30, 0, 10),
-                  child: Text(
+                  padding: const EdgeInsets.fromLTRB(30, 30, 0, 10),
+                  child: const Text(
                     "ENGLISH",
                     style: TextStyle(
                       fontSize: 18,
@@ -125,7 +128,7 @@ class _SpeechTranslatorState extends State<SpeechTranslator> {
                   width: 50,
                   height: 20,
                   child: IconButton(
-                    icon: Icon(Icons.volume_up),
+                    icon: const Icon(Icons.volume_up),
                     onPressed: () => _speakEn(),
                   ),
                 ),
@@ -143,15 +146,15 @@ class _SpeechTranslatorState extends State<SpeechTranslator> {
                     hintText: 'Try speaking "Hello"',
                     filled: true,
                     fillColor: Colors.grey[100],
-                    contentPadding: EdgeInsets.fromLTRB(30, 0, 30, 0)),
+                    contentPadding: const EdgeInsets.fromLTRB(30, 0, 30, 0)),
               ),
             ),
             Align(
               alignment: Alignment.centerLeft,
               child: Row(children: <Widget>[
                 Container(
-                  padding: EdgeInsets.fromLTRB(30, 30, 0, 10),
-                  child: Text(
+                  padding: const EdgeInsets.fromLTRB(30, 30, 0, 10),
+                  child: const Text(
                     "HINDI",
                     style: TextStyle(
                       fontSize: 18,
@@ -162,7 +165,7 @@ class _SpeechTranslatorState extends State<SpeechTranslator> {
                   width: 50,
                   height: 20,
                   child: IconButton(
-                    icon: Icon(Icons.volume_up),
+                    icon: const Icon(Icons.volume_up),
                     onPressed: () => _speakHi(),
                   ),
                 ),
@@ -178,19 +181,41 @@ class _SpeechTranslatorState extends State<SpeechTranslator> {
                     border: InputBorder.none,
                     filled: true,
                     fillColor: Colors.grey[100],
-                    contentPadding: EdgeInsets.fromLTRB(30, 0, 30, 0)),
+                    contentPadding: const EdgeInsets.fromLTRB(30, 0, 30, 0)),
               ),
+            ),
+            Container(
+                child: OutlinedButton(
+              child: RichText(
+                text: const TextSpan(
+                  children: [
+                    WidgetSpan(
+                      child: Icon(Icons.warning, size: 14),
+                    ),
+                    TextSpan(
+                      text: " Incorrect recongition?",
+                      style: TextStyle(
+                        color: Colors.black,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              onPressed: () => _correctLabel(context),
+            )),
+            const SizedBox(
+              height: 200,
             ),
             SizedBox(
               width: 150,
               height: 50,
               child: OutlinedButton(
                 onPressed: () => _showVocab(context),
-                child: Text('Sentences list'),
+                child: const Text('Sentences list'),
               ),
             ),
           ],
-        ));
+        )));
   }
 
   void _listen() async {
@@ -200,11 +225,13 @@ class _SpeechTranslatorState extends State<SpeechTranslator> {
         setState(() => _isListening = true);
         _speech.listen(
           onResult: (val) => setState(() {
-            String text = val.recognizedWords;
-            _controllerEn.text = text;
-            text = text.toLowerCase();
-            if (vocabSentences.contains(text)) {
-              _entohi(text);
+            String en_text = val.recognizedWords;
+            en_text = en_text.toLowerCase();
+            if (vocabSentences.contains(en_text)) {
+              _entohi(en_text);
+              _controllerEn.text = en_text;
+            } else {
+              _controllerEn.text = '';
             }
           }),
         );
@@ -234,9 +261,14 @@ class _SpeechTranslatorState extends State<SpeechTranslator> {
     } else if (en_text == 'ride') {
       hi_text = 'सवारी किधर मिलेगी?';
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Try phrases from vocabulary'),
-      ));
+      hi_text = '';
+      final difference = DateTime.now().difference(prevSnack);
+      if (difference.inSeconds > 5) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Try phrases from vocabulary'),
+        ));
+        prevSnack = DateTime.now();
+      }
     }
     _controllerHi.text = hi_text;
   }
@@ -246,14 +278,14 @@ class _SpeechTranslatorState extends State<SpeechTranslator> {
         context: context,
         builder: (BuildContext context) {
           return Dialog(
-            insetPadding: EdgeInsets.fromLTRB(100, 220, 100, 220),
+            insetPadding: const EdgeInsets.fromLTRB(100, 220, 100, 220),
             child: Stack(
               children: <Widget>[
                 Container(
                   // width: 100,
                   // height: 100,
                   alignment: Alignment.center,
-                  child: Align(
+                  child: const Align(
                     alignment: Alignment.center,
                     child: Text(
                       'Hello\nHi\nHey\nThank you\nThanks\nCost\nPrice\nWater\nDrink\nFood\nEat\nTourist place\nVisit place\nDirection\nWay\nRide',
@@ -270,7 +302,7 @@ class _SpeechTranslatorState extends State<SpeechTranslator> {
                     onTap: () {
                       Navigator.of(context).pop();
                     },
-                    child: Align(
+                    child: const Align(
                       alignment: Alignment.topRight,
                       child: CircleAvatar(
                         backgroundColor: Colors.white,
@@ -286,6 +318,69 @@ class _SpeechTranslatorState extends State<SpeechTranslator> {
             ),
           );
         });
+  }
+
+  Future<void> _correctLabel(BuildContext context) {
+    return showDialog<void>(
+        context: context,
+        builder: (BuildContext context) {
+          return Dialog(
+              child: SingleChildScrollView(
+            child: Stack(children: [
+              Column(
+                children: <Widget>[
+                  const SizedBox(
+                    height: 50,
+                    width: 250,
+                  ),
+                  const Text("Enter the word you spoke"),
+                  SizedBox(
+                    width: 200,
+                    child: TextFormField(
+                      validator: _checkLabel,
+                    ),
+                  ),
+                  const SizedBox(
+                    height: 30,
+                  ),
+                  OutlinedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      child: const Text("SUBMIT")),
+                ],
+              ),
+              Positioned(
+                right: 0.0,
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Align(
+                    alignment: Alignment.topRight,
+                    child: CircleAvatar(
+                      backgroundColor: Colors.white,
+                      child: Icon(
+                        Icons.close,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ]),
+          ));
+        });
+  }
+
+  String? _checkLabel(String? s) {
+    if (s != null) {
+      s = s.toLowerCase();
+      if (vocabSentences.contains(s)) {
+        return null;
+      }
+    }
+    return 'Input word from vocabulary';
   }
 
   Future _speakEn() async {
