@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'hmm.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:decorated_icon/decorated_icon.dart';
 import 'dart:io';
@@ -32,7 +33,7 @@ class SpeechTranslator extends StatefulWidget {
 }
 
 class _SpeechTranslatorState extends State<SpeechTranslator> {
-  late stt.SpeechToText _speech;
+  late stt.SpeechToText _speechHMM;
   bool _isListening = false;
   final TextEditingController _controllerEn = TextEditingController();
   final TextEditingController _controllerHi = TextEditingController();
@@ -60,7 +61,7 @@ class _SpeechTranslatorState extends State<SpeechTranslator> {
   @override
   void initState() {
     super.initState();
-    _speech = stt.SpeechToText();
+    _speechHMM = stt.SpeechToText();
   }
 
   @override
@@ -220,10 +221,10 @@ class _SpeechTranslatorState extends State<SpeechTranslator> {
 
   void _listen() async {
     if (!_isListening) {
-      bool available = await _speech.initialize();
+      bool available = await _speechHMM.initialize();
       if (available) {
         setState(() => _isListening = true);
-        _speech.listen(
+        _speechHMM.listen(
           onResult: (val) => setState(() {
             String en_text = val.recognizedWords;
             en_text = en_text.toLowerCase();
@@ -238,7 +239,7 @@ class _SpeechTranslatorState extends State<SpeechTranslator> {
       }
     } else {
       setState(() => _isListening = false);
-      _speech.stop();
+      _speechHMM.stop();
     }
   }
 
