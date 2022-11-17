@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'dart:math' as Math;
 
+
+// Applies Hamming Window to the frame
 List<double> applyHammingWindow(List<double> frame) {
   File file = File("hmm/Hamming_window.txt");
   var fileContent = file.readAsStringSync();
@@ -14,6 +16,8 @@ List<double> applyHammingWindow(List<double> frame) {
   return frame;
 }
 
+
+//Applies Raised Sin Window to the coefficients
 List<double> applyRaisedSineWindow(List<double> frame) {
   for (int i = 0; i < 12; i++) {
     double aux = Math.sin((Math.pi * (i + 1)) / 12.0);
@@ -23,6 +27,48 @@ List<double> applyRaisedSineWindow(List<double> frame) {
   return frame;
 }
 
+
+// Pre_processing => handles microphone artifact, dc correction and normalisation
+double pre_processing(List<int> inData, List<double> processedData)
+{
+	double _avg=0.0;             //dc shift = Sum(data)/Size(data);
+	double mx=0.0;               //store maximum absolute value
+
+	int siz=0;
+
+	for(int i=3200;i < inData.length;i++)  //neglect 32 frames (0.2 seconds)
+	{ 
+		siz++;
+		_avg += (inData[i]-_avg)/siz;  //calculate dc shift
+
+		//get absolute maximum value
+		if(inData[i]<0.0)
+		{
+			if(mx<inData[i]*-1.0)
+			{
+				mx=(inData[i]*-1.0);
+			}
+		}
+		else
+		{
+			if(mx<inData[i])
+			{
+				mx=inData[i]*1.0;
+			}
+		}
+	}
+
+	for(int i=3200;i<inData.length;i++)
+	{
+		double datapoint=(inData[i]- _avg)*(5000.0/mx);     //dc correction and normalisation
+		processedData.add(datapoint);
+	}
+
+	return (5000.0/mx);
+}
+
+
+// Given frame and lag, computes the correlation
 double compute_correlation(List<double> frame, int lag) {
   double correlation = 0.0;
   for (int index = lag; index < frame.length; index++) {
@@ -31,6 +77,8 @@ double compute_correlation(List<double> frame, int lag) {
   return correlation;
 }
 
+
+//computes lpc coefficients from correlation coefficients
 List<double> compute_levensionDurbins(List<double> correlation_coefficients) {
   double e = correlation_coefficients[0];
   double k;
@@ -56,6 +104,7 @@ List<double> compute_levensionDurbins(List<double> correlation_coefficients) {
   return lpc_coefficients;
 }
 
+//computes cepstral coefficients from lpc coefficients
 List<double> compute_cepstral_coefficients(List<double> lpc_coefficients) {
   List<double> cepstral_coefficients = [];
 
@@ -71,6 +120,8 @@ List<double> compute_cepstral_coefficients(List<double> lpc_coefficients) {
   return cepstral_coefficients;
 }
 
+
+//applies hamming window, computes correlation, obtains lpc coefficients and cepstral coefficients and assigns a codeVector from codeBook
 List<int> get_observation_sequence(List<double> amplitudes) {
   List<int> seq = [];
 
@@ -122,6 +173,8 @@ List<int> get_observation_sequence(List<double> amplitudes) {
   return seq;
 }
 
+
+//Computes P(O/Lambda)
 double forward_procedure(List pi, List a, List b, int n, int m, List o, int T) {
   var alpha =
       List.generate(T, (i) => List.generate(n, (j) => 0.0), growable: false);
@@ -157,6 +210,7 @@ double forward_procedure(List pi, List a, List b, int n, int m, List o, int T) {
   return prob;
 }
 
+//Gets P(O/Lambda) for every model and returns the model with highest probability
 String _test_hmm(String filePath) {
   File file = File(filePath);
   var fileContent = file.readAsStringSync();
@@ -224,6 +278,8 @@ String _test_hmm(String filePath) {
 //////////////////////////////////////////////////////////////////////////////////////
 ///                 TRAINING                          ///
 
+
+//returns alpha 
 List<List<double>> forward_procedure1(
     List pi, List a, List b, int n, int m, List o, int T) {
   var alpha =
@@ -248,18 +304,11 @@ List<List<double>> forward_procedure1(
     prob += alpha[T - 1][i];
   }
 
-  //print alpha
-  //for(int i=0; i<T; i++)
-  //{
-  //	for(int j=0; j<n; j++)
-  //	{
-  //		cout<<alpha[i][j]<<" ";
-  //	}
-  //	cout<<endl;
-  //}
   return alpha;
 }
 
+
+//returns beta
 List<List<double>> backward_procedure(
     List pi, List a, List b, int n, int m, List o, int T) {
   var beta =
@@ -291,6 +340,8 @@ List<List<double>> backward_procedure(
   return beta;
 }
 
+
+//gives 5 frames around stable region for training
 void get_frames(List<double> processedData, List<List<double>> frames) {
   double mx = 0.0; //store maximum absolute value
   int mx_index = 320;
@@ -318,6 +369,8 @@ void get_frames(List<double> processedData, List<List<double>> frames) {
   }
 }
 
+
+// return gamma
 List<List<double>> get_gamma(List alpha, List beta, int n, int T) {
   var gamma =
       List.generate(T, (i) => List.generate(n, (j) => 0.0), growable: false);
@@ -335,6 +388,8 @@ List<List<double>> get_gamma(List alpha, List beta, int n, int T) {
   return gamma;
 }
 
+
+//
 List<List<List<double>>> get_ita(
     List alpha, List beta, List a, List b, List o, int n, int m, int T) {
   var ita = List.generate(
@@ -360,6 +415,7 @@ List<List<List<double>>> get_ita(
   return ita;
 }
 
+//viterbi algorithm for optimal state sequence
 List<int> viterbi(List pi, List a, List b, int n, int m, List o, int T) {
   var gamma =
       List.generate(T, (i) => List.generate(n, (j) => 0), growable: false);
@@ -404,17 +460,11 @@ List<int> viterbi(List pi, List a, List b, int n, int m, List o, int T) {
     optimal_state_sequence[i] = gamma[i + 1][optimal_state_sequence[i + 1]];
   }
 
-  //print optimal state sequence
-  //cout<<"P* = "<<max_state_prob<<endl;
-  //for(int i=0; i<T; i++)
-  //{
-  //	cout<<optimal_state_sequence[i]<<" ";
-  //}
-  //cout<<endl;
-
   return optimal_state_sequence;
 }
 
+
+//upates pi
 List<double> update_pi(List gamma, int n, List<double> pi) {
   for (int j = 0; j < n; j++) {
     pi[j] = gamma[0][j];
@@ -423,9 +473,11 @@ List<double> update_pi(List gamma, int n, List<double> pi) {
   return pi;
 }
 
+
+//updates a
 List<List<double>> update_state_transition_matrix(
     List ita, List gamma, int n, int T, List<List<double>> a) {
-  //cout<<"new state transition matrix is : "<<endl;
+
   for (int j = 0; j < n; j++) {
     for (int k = 0; k < n; k++) {
       double num = 0.0;
@@ -441,14 +493,13 @@ List<List<double>> update_state_transition_matrix(
       } else {
         a[j][k] = num / den;
       }
-      //cout<<num/den<<" ";
     }
-    //cout<<endl;
   }
 
   return a;
 }
 
+//updates b
 List<List<double>> update_beta(
     List gamma, List o, int n, int m, int T, List<List<double>> b) {
   for (int j = 0; j < n; j++) {
@@ -474,6 +525,8 @@ List<List<double>> update_beta(
   return b;
 }
 
+
+//reads speech file, gets observation sequence, gets alpha, beta, gamma, ita and updates, model Lambda(a, b, pi)
 void train_HMM(String filePath, String label) {
   File file = File(filePath);
   var fileContent = file.readAsStringSync();
