@@ -62,6 +62,7 @@ class _SpeechTranslatorState extends State<SpeechTranslator> {
   void initState() {
     super.initState();
     _speechHMM = stt.SpeechToText();
+    _listen();
   }
 
   @override
@@ -137,7 +138,7 @@ class _SpeechTranslatorState extends State<SpeechTranslator> {
             ),
             SizedBox(
               width: MediaQuery.of(context).size.width - 30,
-              height: 100,
+              height: 50,
               child: TextField(
                 maxLines: null,
                 controller: _controllerEn,
@@ -174,7 +175,7 @@ class _SpeechTranslatorState extends State<SpeechTranslator> {
             ),
             SizedBox(
               width: MediaQuery.of(context).size.width - 30,
-              height: 100,
+              height: 50,
               child: TextField(
                 controller: _controllerHi,
                 onChanged: (value) {},
@@ -185,6 +186,9 @@ class _SpeechTranslatorState extends State<SpeechTranslator> {
                     contentPadding: const EdgeInsets.fromLTRB(30, 0, 30, 0)),
               ),
             ),
+            SizedBox(
+              height: 20,
+            ),
             Container(
                 child: OutlinedButton(
               child: RichText(
@@ -194,7 +198,7 @@ class _SpeechTranslatorState extends State<SpeechTranslator> {
                       child: Icon(Icons.warning, size: 14),
                     ),
                     TextSpan(
-                      text: " Incorrect recongition?",
+                      text: " Incorrect recognition?",
                       style: TextStyle(
                         color: Colors.black,
                       ),
@@ -204,17 +208,41 @@ class _SpeechTranslatorState extends State<SpeechTranslator> {
               ),
               onPressed: () => _correctLabel(context),
             )),
-            const SizedBox(
-              height: 200,
-            ),
-            SizedBox(
-              width: 150,
-              height: 50,
-              child: OutlinedButton(
-                onPressed: () => _showVocab(context),
-                child: const Text('Sentences list'),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(30, 30, 0, 10),
+                child: const Text(
+                  "Try out these sentences -",
+                  style: TextStyle(
+                    fontSize: 18,
+                  ),
+                ),
               ),
             ),
+            SizedBox(
+                width: MediaQuery.of(context).size.width - 30,
+                height: MediaQuery.of(context).size.height - 600,
+                child: Container(
+                  color: Colors.grey[100],
+                  child: Scrollbar(
+                    child: ListView.builder(
+                        itemCount: vocabSentences.length,
+                        scrollDirection: Axis.vertical,
+                        itemBuilder: (context, index) {
+                          return ListTile(
+                            visualDensity: VisualDensity(vertical: -4),
+                            title: Text(
+                              textAlign: TextAlign.center,
+                              vocabSentences[index],
+                              style: TextStyle(
+                                fontSize: 16,
+                              ),
+                            ),
+                          );
+                        }),
+                  ),
+                )),
           ],
         )));
   }
